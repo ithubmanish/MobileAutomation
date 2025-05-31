@@ -4,23 +4,13 @@ import Runner.TestRunner;
 import com.relevantcodes.extentreports.ExtentReports;
 import com.relevantcodes.extentreports.LogStatus;
 import io.appium.java_client.android.AndroidDriver;
-import io.appium.java_client.pagefactory.AndroidBy;
-import io.appium.java_client.pagefactory.AndroidFindBy;
-import io.appium.java_client.pagefactory.AppiumElementLocatorFactory;
 import io.appium.java_client.service.local.AppiumServiceBuilder;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.example.Main;
-import org.openqa.selenium.By;
-import org.openqa.selenium.Capabilities;
-import org.openqa.selenium.OutputType;
-import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.*;
 import org.openqa.selenium.remote.DesiredCapabilities;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.util.Base64;
 import java.util.Collection;
@@ -28,49 +18,11 @@ import java.util.Date;
 
 import io.cucumber.java.Scenario;
 
-import javax.imageio.stream.ImageInputStream;
-
 
 public class KeywordUtils {
     static String testCaseDescription;
     static String imagePath;
     static String pathForLogger;
-
-    public static void startServer() {
-        try {
-            DriverUtils.service = new AppiumServiceBuilder()
-                    .usingPort(4723)
-                    .build();
-            DriverUtils.service.start();
-            System.out.println("Appium server started at: " + DriverUtils.service.getUrl());
-            DriverUtils.driver = new AndroidDriver(new URL("http://127.0.0.1:4723"), KeywordUtils.setCapabilities());
-            System.out.println("Android Application started at: " + DriverUtils.service.getUrl());
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void stopServer() {
-        try {
-            DriverUtils.service.stop();
-            System.out.println("Android Application started at: " + DriverUtils.service.getUrl());
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    public static Capabilities setCapabilities() {
-        DesiredCapabilities capabilities = new DesiredCapabilities();
-        capabilities.setCapability("deviceName", ConfigReader.getValue("deviceName"));
-        capabilities.setCapability("platformName", ConfigReader.getValue("platformName"));
-        capabilities.setCapability("platformVersion", ConfigReader.getValue("platformVersion"));
-        capabilities.setCapability("automationName", ConfigReader.getValue("automationName"));
-        capabilities.setCapability("appPackage", ConfigReader.getValue("appPackage"));
-        capabilities.setCapability("appActivity", ConfigReader.getValue("appActivity"));
-        return capabilities;
-    }
-
 
     public static void cleanDirectory() {
         try {
@@ -89,8 +41,8 @@ public class KeywordUtils {
 
     public static void extentReportInitialization() {
         try {
-            TestRunner.extent=new ExtentReports(System.getProperty("user.dir")+ConfigReader.getValue("extentReportPath"),true);
-            TestRunner.extent.loadConfig(new File(System.getProperty("user.dir")+ConfigReader.getValue("extentConfigFile")));
+            TestRunner.extent = new ExtentReports(System.getProperty("user.dir") + ConfigReader.getValue("extentReportPath"), true);
+            TestRunner.extent.loadConfig(new File(System.getProperty("user.dir") + ConfigReader.getValue("extentConfigFile")));
             LogUtils.infoLog(TestRunner.class, "\n\n+===========================================================================================================+");
             LogUtils.infoLog(TestRunner.class, " Suite started" + " at " + new Date());
             LogUtils.infoLog(TestRunner.class, "\n\n+===========================================================================================================+");
@@ -100,13 +52,50 @@ public class KeywordUtils {
         }
     }
 
+    public static void startServer() {
+        try {
+            DriverUtils.service = new AppiumServiceBuilder()
+                    .usingPort(4723)
+//                    .usingAnyFreePort()
+                    .build();
+            DriverUtils.service.start();
+            System.out.println("Appium server started at: " + DriverUtils.service.getUrl());
+            DriverUtils.driver = new AndroidDriver(new URL("http://127.0.0.1:4723"), KeywordUtils.setCapabilities());
+            System.out.println("Android Application started at: " + DriverUtils.service.getUrl());
+            Thread.sleep(5000);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void stopServer() {
+        try {
+            DriverUtils.service.stop();
+            System.out.println("Android Application stopped at: " + DriverUtils.service.getUrl());
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static Capabilities setCapabilities() throws IOException {
+        DesiredCapabilities capabilities = new DesiredCapabilities();
+        ExcelUtilities.fetchData("DeviceDetail","ConfigureApp");
+        capabilities.setCapability("deviceName", String.valueOf(ExcelUtilities.excelData.get("DeviceName")));
+        capabilities.setCapability("platformName", String.valueOf(ExcelUtilities.excelData.get("PlatformName")));
+        capabilities.setCapability("platformVersion", String.valueOf(ExcelUtilities.excelData.get("PlatformVersion")));
+        capabilities.setCapability("automationName", String.valueOf(ExcelUtilities.excelData.get("AutomationName")));
+        capabilities.setCapability("appPackage", String.valueOf(ExcelUtilities.excelData.get("AppPackage")));
+        capabilities.setCapability("appActivity", String.valueOf(ExcelUtilities.excelData.get("AppActivity")));
+        return capabilities;
+    }
+
     public static void extentReportClosure() {
         try {
-            LogUtils.infoLog(TestRunner.class,"Suite Finished at: "+new Date());
-            LogUtils.infoLog(TestRunner.class,"===========================================================");
+            LogUtils.infoLog(TestRunner.class, "Suite Finished at: " + new Date());
+            LogUtils.infoLog(TestRunner.class, "===========================================================");
             TestRunner.extent.flush();
-        }
-        catch (Throwable e){
+        } catch (Throwable e) {
 
         }
     }
@@ -143,36 +132,34 @@ public class KeywordUtils {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
         LogUtils.infoLog("",
                 "\n+----------------------------------------------------------------------------------------------------------------------------+");
         LogUtils.infoLog("", "Mobile Tests Started: " + scenario.getName());
-
         LogUtils.infoLog("Mobile Test Environment",
-                "Mobile Test is executed in OS: IOS " + System.getProperty("udid"));
+                "Mobile Test is executed in OS:  " + System.getProperty("udid"));
     }
 
     public static void endScenario(Scenario scenario) {
-                if (scenario.isFailed()) {
-                    try {
-                        String scFileName = "ScreenShot_" + System.currentTimeMillis();
-                        String screenshotFilePath = ConfigReader.getValue("screenshotPath") + "\\" + scFileName + ".png";
-                        imagePath = HTMLReportUtil.testFailTakeScreenshot(screenshotFilePath);
-                        InputStream is = new FileInputStream(imagePath);
-                        byte[] imageBytes = IOUtils.toByteArray(is);
-                        Thread.sleep(2000);
-                        String base64 = Base64.getEncoder().encodeToString(imageBytes);
-                        TestRunner.logger.log(LogStatus.FAIL, HTMLReportUtil.failStringRedColor("Failed at point: " + pathForLogger + TestRunner.failMsg));
-                        byte[] screenshot =TakeScreenshot.takeScreenshot(imagePath);
-                        scenario.attach(screenshot, "image/png", "");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    LogUtils.infoLog("TestEnded", "Closing the application");
-                }
-                DriverUtils.driver.quit();
-                TestRunner.extent.endTest(TestRunner.logger);
+        if (scenario.isFailed()) {
+            try {
+                String scFileName = "ScreenShot_" + System.currentTimeMillis();
+                String screenshotFilePath = ConfigReader.getValue("screenshotPath") + "\\" + scFileName + ".png";
+                imagePath = HTMLReportUtil.testFailTakeScreenshot(screenshotFilePath);
+                InputStream is = new FileInputStream(imagePath);
+                byte[] imageBytes = IOUtils.toByteArray(is);
+                Thread.sleep(4000);
+                String base64 = Base64.getEncoder().encodeToString(imageBytes);
+                TestRunner.logger.log(LogStatus.FAIL, HTMLReportUtil.failStringRedColor("Failed at point: " + pathForLogger + TestRunner.failMsg));
+                byte[] screenshot = TakeScreenshot.takeScreenshot(imagePath);
+                scenario.attach(screenshot, "image/png", "");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            LogUtils.infoLog("TestEnded", "Closing the application");
+        }
+        DriverUtils.driver.quit();
+        TestRunner.extent.endTest(TestRunner.logger);
     }
 
 
@@ -185,12 +172,18 @@ public class KeywordUtils {
         }
     }
 
-    public static boolean click(By locator, String logStep){
+
+    public static boolean click(By locator, String logStep) {
         DriverUtils.driver.findElement(locator).click();
         return true;
-        
-
     }
 
+    public static boolean isElementPresent(By locator, String logStep) {
+        WebElement element = DriverUtils.driver.findElement(locator);
+        if (element.isDisplayed()) {
+            TestRunner.logger.log(LogStatus.PASS, "Element is Present " + logStep);
+        }
+        return true;
+    }
 
 }
