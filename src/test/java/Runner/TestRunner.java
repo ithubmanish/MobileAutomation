@@ -23,11 +23,9 @@ public class TestRunner extends AbstractTestNGCucumberTests {
         KeywordUtils.cleanDirectory();
         KeywordUtils.extentReportInitialization();
     }
-
     @AfterSuite
     public void after() {
         KeywordUtils.extentReportClosure();
         KeywordUtils.openReport();
     }
-
 }

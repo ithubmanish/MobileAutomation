@@ -10,7 +10,7 @@ public class Hooks {
     @Before("@MobileTests")
     public static void beforeMobileMethod(Scenario scenario) {
         KeywordUtils.testCaseDescriptionStart(scenario);
-//        KeywordUtils.startServer();
+        KeywordUtils.startServer();
     }
 
     @After("@MobileTests")
